@@ -357,8 +357,8 @@ function animate(currentTime) {
     let moveZ = 0;
     if (keys['KeyW'] || keys['ArrowUp']) moveZ += 1;
     if (keys['KeyS'] || keys['ArrowDown']) moveZ -= 1;
-    if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
-    if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+    if (keys['KeyD'] || keys['ArrowRight']) moveX -= 1; // Di chuyển sang phải theo góc nhìn camera
+    if (keys['KeyA'] || keys['ArrowLeft']) moveX += 1;  // Di chuyển sang trái theo góc nhìn camera
 
     const deg = (camYaw * 180 / Math.PI);
     sim.currentInput.move = [moveX, moveZ];
@@ -392,7 +392,7 @@ function animate(currentTime) {
   // Update visual entities
   playerGroup.position.set(sim.player.pos[0], sim.player.pos[1], sim.player.pos[2]);
   if (sim.currentInput.move[0] !== 0 || sim.currentInput.move[1] !== 0) {
-    const targetRot = camYaw - Math.atan2(sim.currentInput.move[0], sim.currentInput.move[1]);
+    const targetRot = camYaw + Math.atan2(sim.currentInput.move[0], sim.currentInput.move[1]);
     playerGroup.rotation.y = targetRot;
   }
 
