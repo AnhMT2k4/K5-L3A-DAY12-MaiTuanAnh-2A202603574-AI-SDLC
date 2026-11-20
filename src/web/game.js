@@ -1,7 +1,9 @@
 import * as THREE from './vendor/three.module.js';
-import { GameSimulation } from '../core/simulation.js';
-import { ISLAND_RADIUS } from '../core/constants.js';
+import { GameSimulation } from './core/simulation.js';
+import { ISLAND_RADIUS } from './core/constants.js';
 import { sound } from './audio.js';
+
+console.log('🏮 Initializing Đảo Đèn Lồng 3D Web Engine...');
 
 // DOM elements
 const canvas = document.getElementById('game-canvas');
@@ -17,68 +19,77 @@ const modalDesc = document.getElementById('modal-desc');
 const finalScoreEl = document.getElementById('final-score');
 const btnRestart = document.getElementById('btn-restart');
 
-// Three.js setup
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+// Three.js renderer setup
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x060714);
-scene.fog = new THREE.FogExp2(0x0a0c20, 0.015);
+scene.background = new THREE.Color(0x0a1128); // Rich dark indigo night sky
+scene.fog = new THREE.FogExp2(0x0a1128, 0.008);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0x242845, 1.2);
+// Lighting setup: Warm, fairylike atmosphere
+const hemiLight = new THREE.HemisphereLight(0x7090d0, 0x1a2e1d, 1.8);
+scene.add(hemiLight);
+
+const ambientLight = new THREE.AmbientLight(0x3a4b78, 1.5);
 scene.add(ambientLight);
 
-const moonLight = new THREE.DirectionalLight(0x6b8cce, 1.0);
-moonLight.position.set(40, 60, -40);
+const moonLight = new THREE.DirectionalLight(0xa5c4f5, 1.8);
+moonLight.position.set(40, 70, -30);
 moonLight.castShadow = true;
 moonLight.shadow.mapSize.width = 1024;
 moonLight.shadow.mapSize.height = 1024;
+moonLight.shadow.camera.near = 10;
+moonLight.shadow.camera.far = 150;
+moonLight.shadow.camera.left = -50;
+moonLight.shadow.camera.right = 50;
+moonLight.shadow.camera.top = 50;
+moonLight.shadow.camera.bottom = -50;
 scene.add(moonLight);
 
-// Environment: Sea of Clouds
-const cloudGeo = new THREE.PlaneGeometry(300, 300, 32, 32);
+// Environment: Sea of Clouds below the island
+const cloudGeo = new THREE.PlaneGeometry(400, 400, 32, 32);
 const cloudMat = new THREE.MeshBasicMaterial({
-  color: 0x121630,
+  color: 0x1b2845,
   transparent: true,
-  opacity: 0.8
+  opacity: 0.85
 });
 const cloudMesh = new THREE.Mesh(cloudGeo, cloudMat);
 cloudMesh.rotation.x = -Math.PI / 2;
-cloudMesh.position.y = -3.0;
+cloudMesh.position.y = -2.5;
 scene.add(cloudMesh);
 
-// Island Mesh
-const islandGeo = new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 4, 3, 48);
+// Island Mesh (Lush night grass on top, rocky cliff below)
+const islandGeo = new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 3, 2.5, 64);
 const islandMat = new THREE.MeshStandardMaterial({
-  color: 0x1d3326,
-  roughness: 0.85,
+  color: 0x225533, // Vivid dark green grass
+  roughness: 0.8,
   metalness: 0.1
 });
 const islandMesh = new THREE.Mesh(islandGeo, islandMat);
-islandMesh.position.y = -1.5;
+islandMesh.position.y = -1.25;
 islandMesh.receiveShadow = true;
 scene.add(islandMesh);
 
-// Pier
-const pierGeo = new THREE.BoxGeometry(8, 0.8, 18);
-const pierMat = new THREE.MeshStandardMaterial({ color: 0x4a3423, roughness: 0.9 });
+// Pier (wooden pier extending out into the sea of clouds)
+const pierGeo = new THREE.BoxGeometry(8, 0.6, 16);
+const pierMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.85 });
 const pierMesh = new THREE.Mesh(pierGeo, pierMat);
-pierMesh.position.set(0, -0.4, ISLAND_RADIUS + 4);
+pierMesh.position.set(0, -0.3, ISLAND_RADIUS + 4);
 pierMesh.receiveShadow = true;
 scene.add(pierMesh);
 
-// Player 3D Representation (Mây with Nón Lá and small lantern)
+// Player 3D Character: Mây
 const playerGroup = new THREE.Group();
 
-// Body
+// Body (Blue áo dài tunic)
 const bodyGeo = new THREE.CylinderGeometry(0.35, 0.45, 1.1, 16);
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.7 });
+const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.6 });
 const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
 bodyMesh.position.y = 0.55;
 bodyMesh.castShadow = true;
@@ -86,31 +97,34 @@ playerGroup.add(bodyMesh);
 
 // Head
 const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
-const headMat = new THREE.MeshStandardMaterial({ color: 0xffd1a4, roughness: 0.6 });
+const headMat = new THREE.MeshStandardMaterial({ color: 0xffd1a4, roughness: 0.5 });
 const headMesh = new THREE.Mesh(headGeo, headMat);
 headMesh.position.y = 1.35;
 headMesh.castShadow = true;
 playerGroup.add(headMesh);
 
-// Nón Lá (Conical Hat)
+// Nón Lá (Conical Palm Leaf Hat)
 const hatGeo = new THREE.ConeGeometry(0.75, 0.35, 24);
-const hatMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.8 });
+const hatMat = new THREE.MeshStandardMaterial({ color: 0xe0a96d, roughness: 0.7 });
 const hatMesh = new THREE.Mesh(hatGeo, hatMat);
 hatMesh.position.y = 1.6;
 hatMesh.castShadow = true;
 playerGroup.add(hatMesh);
 
-// Small Lantern hanging from hat
-const smallLanternGeo = new THREE.BoxGeometry(0.18, 0.25, 0.18);
-const smallLanternMat = new THREE.MeshBasicMaterial({ color: 0xffcc33 });
+// Small Lantern hanging from the hat brim
+const smallLanternGroup = new THREE.Group();
+smallLanternGroup.position.set(0.4, 1.25, 0.4);
+
+const smallLanternGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8);
+const smallLanternMat = new THREE.MeshBasicMaterial({ color: 0xffbb33 });
 const smallLanternMesh = new THREE.Mesh(smallLanternGeo, smallLanternMat);
-smallLanternMesh.position.set(0.35, 1.25, 0.35);
-playerGroup.add(smallLanternMesh);
+smallLanternGroup.add(smallLanternMesh);
 
-const playerPointLight = new THREE.PointLight(0xffaa22, 1.5, 6);
-playerPointLight.position.set(0.35, 1.25, 0.35);
-playerGroup.add(playerPointLight);
+const playerPointLight = new THREE.PointLight(0xffa726, 3.5, 12);
+playerPointLight.castShadow = true;
+smallLanternGroup.add(playerPointLight);
 
+playerGroup.add(smallLanternGroup);
 scene.add(playerGroup);
 
 // Game Simulation instance
@@ -126,47 +140,56 @@ sim.lanterns.forEach(l => {
   const lGroup = new THREE.Group();
   lGroup.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
-  // Stone base
-  const baseGeo = new THREE.CylinderGeometry(0.8, 1.0, 0.6, 8);
-  const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.9 });
+  // Stone base pedestal
+  const baseGeo = new THREE.CylinderGeometry(0.9, 1.2, 0.7, 8);
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
   const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-  baseMesh.position.y = 0.3;
+  baseMesh.position.y = 0.35;
   baseMesh.castShadow = true;
+  baseMesh.receiveShadow = true;
   lGroup.add(baseMesh);
 
-  // Pillar
-  const poleGeo = new THREE.CylinderGeometry(0.2, 0.25, 2.5, 8);
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 });
+  // Wooden pillar
+  const poleGeo = new THREE.CylinderGeometry(0.25, 0.3, 2.5, 8);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
   const poleMesh = new THREE.Mesh(poleGeo, poleMat);
-  poleMesh.position.y = 1.6;
+  poleMesh.position.y = 1.7;
   poleMesh.castShadow = true;
   lGroup.add(poleMesh);
 
   // Lantern chamber
-  const chamberGeo = new THREE.CylinderGeometry(0.65, 0.5, 1.0, 6);
+  const chamberGeo = new THREE.CylinderGeometry(0.7, 0.55, 1.1, 6);
   const chamberMat = new THREE.MeshStandardMaterial({
-    color: 0x221105,
+    color: 0x3f1d0b,
     roughness: 0.4,
     transparent: true,
-    opacity: 0.85
+    opacity: 0.9
   });
   const chamberMesh = new THREE.Mesh(chamberGeo, chamberMat);
-  chamberMesh.position.y = 3.2;
+  chamberMesh.position.y = 3.3;
   lGroup.add(chamberMesh);
 
-  // Lantern light source
-  const pLight = new THREE.PointLight(0xff9900, 0, 15);
-  pLight.position.set(0, 3.2, 0);
+  // Pagoda roof
+  const roofGeo = new THREE.ConeGeometry(1.1, 0.5, 6);
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.7 });
+  const roofMesh = new THREE.Mesh(roofGeo, roofMat);
+  roofMesh.position.y = 4.1;
+  roofMesh.castShadow = true;
+  lGroup.add(roofMesh);
+
+  // Point light for lit state
+  const pLight = new THREE.PointLight(0xff9900, 0, 20);
+  pLight.position.set(0, 3.3, 0);
   lGroup.add(pLight);
 
   scene.add(lGroup);
   lanternMeshes.set(l.id, { group: lGroup, light: pLight, chamber: chamberMesh });
 });
 
-// Pulse visual wave mesh
-const pulseGeo = new THREE.RingGeometry(0.1, 0.3, 32);
+// Pulse visual wave mesh (golden ring)
+const pulseGeo = new THREE.RingGeometry(0.1, 0.4, 32);
 const pulseMat = new THREE.MeshBasicMaterial({
-  color: 0xffaa00,
+  color: 0xffb703,
   side: THREE.DoubleSide,
   transparent: true,
   opacity: 0
@@ -222,11 +245,18 @@ function updateMotesVisual() {
   for (const m of sim.motes) {
     let mesh = moteMeshes.get(m.id);
     if (!mesh && m.active) {
-      const geo = new THREE.SphereGeometry(0.2, 8, 8);
+      const group = new THREE.Group();
+      const geo = new THREE.SphereGeometry(0.25, 12, 12);
       const mat = new THREE.MeshBasicMaterial({ color: 0xffea00 });
-      mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(m.pos[0], 0.6, m.pos[2]);
-      scene.add(mesh);
+      const orb = new THREE.Mesh(geo, mat);
+      group.add(orb);
+
+      const mLight = new THREE.PointLight(0xffdd00, 1.2, 4);
+      group.add(mLight);
+
+      group.position.set(m.pos[0], 0.7, m.pos[2]);
+      scene.add(group);
+      mesh = group;
       moteMeshes.set(m.id, mesh);
     }
     if (mesh) {
@@ -234,7 +264,7 @@ function updateMotesVisual() {
         scene.remove(mesh);
         moteMeshes.delete(m.id);
       } else {
-        mesh.position.y = 0.6 + Math.sin(Date.now() * 0.004 + m.pos[0]) * 0.15;
+        mesh.position.y = 0.7 + Math.sin(Date.now() * 0.004 + m.pos[0] * 2) * 0.2;
       }
     }
   }
@@ -246,15 +276,27 @@ function updateShadesVisual() {
     let mesh = shadeMeshes.get(s.id);
     if (!mesh) {
       const group = new THREE.Group();
-      const geo = new THREE.SphereGeometry(0.65, 12, 12);
+
+      // Shadow core orb
+      const geo = new THREE.SphereGeometry(0.7, 16, 16);
       const mat = new THREE.MeshStandardMaterial({
-        color: 0x240046,
-        roughness: 0.3,
-        emissive: 0x10002b
+        color: 0x1f0b35,
+        roughness: 0.2,
+        emissive: 0x3c096c
       });
       const orb = new THREE.Mesh(geo, mat);
-      orb.position.y = 0.8;
+      orb.position.y = 0.85;
       group.add(orb);
+
+      // Glowing purple eyes
+      const eyeGeo = new THREE.SphereGeometry(0.1, 8, 8);
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+      const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
+      eye1.position.set(0.25, 0.95, 0.6);
+      const eye2 = new THREE.Mesh(eyeGeo, eyeMat);
+      eye2.position.set(-0.25, 0.95, 0.6);
+      group.add(eye1);
+      group.add(eye2);
 
       scene.add(group);
       mesh = group;
@@ -262,9 +304,9 @@ function updateShadesVisual() {
     }
     mesh.position.set(s.pos[0], 0, s.pos[2]);
     if (s.state === 'stunned') {
-      mesh.children[0].material.color.setHex(0x5a189a);
+      mesh.children[0].material.color.setHex(0x7b2cbf);
     } else {
-      mesh.children[0].material.color.setHex(0x10002b);
+      mesh.children[0].material.color.setHex(0x1f0b35);
     }
   }
 }
@@ -275,12 +317,12 @@ function updateLanternsVisual() {
     const item = lanternMeshes.get(l.id);
     if (item) {
       if (l.lit) {
-        item.light.intensity = 3.5;
+        item.light.intensity = 4.0;
         item.chamber.material.color.setHex(0xffaa00);
         item.chamber.material.emissive = new THREE.Color(0xff8800);
       } else {
         item.light.intensity = 0;
-        item.chamber.material.color.setHex(0x221105);
+        item.chamber.material.color.setHex(0x3f1d0b);
         item.chamber.material.emissive = new THREE.Color(0x000000);
       }
     }
@@ -340,7 +382,7 @@ function animate(currentTime) {
     playerGroup.rotation.y = targetRot;
   }
 
-  // Camera follow
+  // Camera follow (Third-person view behind player)
   const camDist = 7.0;
   const camHeight = Math.sin(camPitch) * camDist;
   const camHRadius = Math.cos(camPitch) * camDist;
@@ -404,4 +446,5 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+console.log('✨ Starting Game Animation Loop...');
 requestAnimationFrame(animate);

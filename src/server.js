@@ -8,11 +8,11 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '..');
 
 const MIME_TYPES = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.mjs': 'application/javascript',
-  '.json': 'application/json',
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
@@ -20,38 +20,45 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let reqPath = decodeURI(req.url.split('?')[0]);
-  if (reqPath === '/' || reqPath === '') {
-    reqPath = '/src/web/index.html';
-  } else if (!reqPath.startsWith('/src/')) {
-    reqPath = '/src/web' + reqPath;
+  let cleanUrl = decodeURI(req.url.split('?')[0]);
+  if (cleanUrl === '/' || cleanUrl === '') {
+    cleanUrl = '/index.html';
   }
 
-  const filePath = path.join(ROOT_DIR, reqPath);
+  // Candidate paths to check in order:
+  const candidates = [
+    path.join(ROOT_DIR, 'src', 'web', cleanUrl),
+    path.join(ROOT_DIR, 'src', cleanUrl),
+    path.join(ROOT_DIR, cleanUrl)
+  ];
 
-  // Prevent path traversal
-  if (!filePath.startsWith(ROOT_DIR)) {
-    res.writeHead(403);
-    res.end('Forbidden');
+  let foundFile = null;
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        foundFile = c;
+        break;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  if (!foundFile) {
+    console.warn(`[404] Not Found: ${req.url}`);
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('404 Not Found');
     return;
   }
 
-  fs.stat(filePath, (err, stats) => {
-    if (err || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('404 Not Found');
-      return;
-    }
+  const ext = path.extname(foundFile).toLowerCase();
+  const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-    const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-    res.writeHead(200, {
-      'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*'
-    });
-    fs.createReadStream(filePath).pipe(res);
+  res.writeHead(200, {
+    'Content-Type': contentType,
+    'Access-Control-Allow-Origin': '*'
   });
+  fs.createReadStream(foundFile).pipe(res);
 });
 
 const PORT = process.env.PORT || 3000;
