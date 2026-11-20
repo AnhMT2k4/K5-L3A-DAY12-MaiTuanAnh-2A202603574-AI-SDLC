@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đảo Đèn Lồng - Đêm 1: Đảo Bến</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top HUD -->
+    <div id="hud">
+      <div class="hud-card">
+        <span class="label">NGỌN LỬA (MÁU)</span>
+        <div id="flames-container" class="val-flames">🔥🔥🔥</div>
+      </div>
+      <div class="hud-card">
+        <span class="label">ĐOM ĐÓM MANG THEO</span>
+        <div id="carried-display" class="val">✨ 0 / 5</div>
+      </div>
+      <div class="hud-card">
+        <span class="label">ĐÈN LỒNG ĐÃ THẮP</span>
+        <div id="lanterns-display" class="val">🏮 0 / 5</div>
+      </div>
+      <div class="hud-card">
+        <span class="label">THỜI GIAN CÒN LẠI</span>
+        <div id="time-display" class="val">⏱️ 180s</div>
+      </div>
+      <div class="hud-card">
+        <span class="label">ĐIỂM SỐ</span>
+        <div id="score-display" class="val highlight">⭐ 0</div>
+      </div>
+    </div>
+
+    <!-- Controls prompt -->
+    <div id="controls-hint">
+      <b>WASD / Mũi tên:</b> Di chuyển | <b>Chuột:</b> Xoay camera | <b>E:</b> Tỏa sáng (xua bóng mực) | <b>F:</b> Nạp đèn | <b>Space:</b> Nhảy
+    </div>
+
+    <!-- Interaction Banner -->
+    <div id="prompt-banner" class="hidden">Nhấn [F] để nạp ánh sáng vào Đèn Lồng</div>
+
+    <!-- Game Over Modal -->
+    <div id="game-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2 id="modal-title">CHIẾN THẮNG!</h2>
+        <p id="modal-desc">Bạn đã thắp sáng toàn bộ Đèn Lồng Lớn trên Đảo Bến, xua tan sương đen!</p>
+        <div class="modal-stats">
+          <div>Điểm chung cuộc: <span id="final-score" class="highlight">0</span></div>
+        </div>
+        <button id="btn-restart" class="btn-primary">CHƠI LẠI ĐÊM 1</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>
