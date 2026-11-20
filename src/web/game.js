@@ -19,12 +19,28 @@ const modalDesc = document.getElementById('modal-desc');
 const finalScoreEl = document.getElementById('final-score');
 const btnRestart = document.getElementById('btn-restart');
 
+// Set canvas dimensions
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 // Three.js renderer setup
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+} catch (e) {
+  console.warn('WebGL with antialias failed, falling back:', e);
+  renderer = new THREE.WebGLRenderer({ canvas });
+}
+
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+try {
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+} catch (e) {
+  console.warn('Shadow map disabled:', e);
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a1128); // Rich dark indigo night sky
@@ -36,20 +52,12 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 const hemiLight = new THREE.HemisphereLight(0x7090d0, 0x1a2e1d, 1.8);
 scene.add(hemiLight);
 
-const ambientLight = new THREE.AmbientLight(0x3a4b78, 1.5);
+const ambientLight = new THREE.AmbientLight(0x4a5b88, 1.8);
 scene.add(ambientLight);
 
 const moonLight = new THREE.DirectionalLight(0xa5c4f5, 1.8);
 moonLight.position.set(40, 70, -30);
 moonLight.castShadow = true;
-moonLight.shadow.mapSize.width = 1024;
-moonLight.shadow.mapSize.height = 1024;
-moonLight.shadow.camera.near = 10;
-moonLight.shadow.camera.far = 150;
-moonLight.shadow.camera.left = -50;
-moonLight.shadow.camera.right = 50;
-moonLight.shadow.camera.top = 50;
-moonLight.shadow.camera.bottom = -50;
 scene.add(moonLight);
 
 // Environment: Sea of Clouds below the island
@@ -328,6 +336,12 @@ function updateLanternsVisual() {
     }
   }
 }
+
+// Render first frame immediately
+updateMotesVisual();
+updateShadesVisual();
+updateLanternsVisual();
+renderer.render(scene, camera);
 
 // Game Loop
 let lastTime = performance.now();

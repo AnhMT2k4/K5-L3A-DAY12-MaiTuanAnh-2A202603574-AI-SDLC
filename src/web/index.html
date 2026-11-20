@@ -7,6 +7,24 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="debug-error-box" style="display:none; position:fixed; top:20px; left:20px; right:20px; background:rgba(220,38,38,0.95); color:#fff; padding:16px 24px; border-radius:8px; font-family:monospace; font-size:14px; z-index:99999; box-shadow:0 10px 25px rgba(0,0,0,0.5); white-space:pre-wrap;"></div>
+  <script>
+    window.addEventListener('error', function(e) {
+      const box = document.getElementById('debug-error-box');
+      if (box) {
+        box.style.display = 'block';
+        box.textContent = '❌ Lỗi JavaScript: ' + (e.message || e.error) + '\nTại: ' + (e.filename || '') + ':' + (e.lineno || '');
+      }
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const box = document.getElementById('debug-error-box');
+      if (box) {
+        box.style.display = 'block';
+        box.textContent = '❌ Lỗi Promise Rejection: ' + (e.reason ? (e.reason.stack || e.reason) : e);
+      }
+    });
+  </script>
+
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
 
