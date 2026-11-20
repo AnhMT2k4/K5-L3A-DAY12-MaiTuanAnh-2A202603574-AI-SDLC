@@ -361,13 +361,15 @@ function animate(currentTime) {
     if (keys['KeyA'] || keys['ArrowLeft']) moveX += 1;  // Di chuyển sang trái theo góc nhìn camera
 
     const deg = (camYaw * 180 / Math.PI);
-    sim.currentInput.move = [moveX, moveZ];
-    sim.currentInput.cam_yaw_deg = deg;
-    sim.currentInput.jump = Boolean(keys['Space']);
-    sim.currentInput.interact = Boolean(keys['KeyF'] || keys['Enter']);
-    sim.currentInput.pulse = Boolean(keys['KeyE']);
+    const frameInput = {
+      move: [moveX, moveZ],
+      cam_yaw_deg: deg,
+      jump: Boolean(keys['Space']),
+      interact: Boolean(keys['KeyF'] || keys['Enter']),
+      pulse: Boolean(keys['KeyE'])
+    };
 
-    const events = sim.step();
+    const events = sim.step(frameInput);
 
     // Sound and visual effects for events
     for (const ev of events) {
@@ -427,11 +429,15 @@ function animate(currentTime) {
   scoreEl.textContent = `⭐ ${sim.score}`;
 
   // Check near unlit lantern for prompt
-  const nearLantern = sim.lanterns.some(
+  const nearLantern = sim.lanterns.find(
     l => !l.lit && Math.hypot(l.pos[0] - sim.player.pos[0], l.pos[2] - sim.player.pos[2]) <= sim.tuning.interact_radius
   );
   if (nearLantern && sim.player.carried > 0) {
     promptEl.classList.remove('hidden');
+    promptEl.textContent = `Nhấn [F] để nạp ${sim.player.carried} đom đóm vào Đèn Lồng (${nearLantern.deposited}/${sim.tuning.lantern_cost})`;
+  } else if (nearLantern && sim.player.carried === 0) {
+    promptEl.classList.remove('hidden');
+    promptEl.textContent = `Đèn Lồng cần 5 đom đóm (${nearLantern.deposited}/5). Hãy nhặt thêm đom đóm!`;
   } else {
     promptEl.classList.add('hidden');
   }

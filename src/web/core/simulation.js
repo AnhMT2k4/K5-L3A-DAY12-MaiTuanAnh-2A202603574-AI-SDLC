@@ -207,7 +207,7 @@ export class GameSimulation {
     };
   }
 
-  step() {
+  step(externalInput = null) {
     if (this.state !== 'playing') {
       return [];
     }
@@ -217,19 +217,30 @@ export class GameSimulation {
     const currentTick = this.tick;
     const nextTick = currentTick + 1;
 
-    // 1. Ingest input frame if matching current tick
+    // Save previous input before applying new input
     this.prevInput = { ...this.currentInput };
-    while (this.frameIndex < this.inputFrames.length && this.inputFrames[this.frameIndex].tick <= currentTick) {
-      const frame = this.inputFrames[this.frameIndex];
-      if (frame.tick === currentTick) {
-        if (frame.move !== undefined) this.currentInput.move = [...frame.move];
-        if (frame.cam_yaw_deg !== undefined) this.currentInput.cam_yaw_deg = frame.cam_yaw_deg;
-        if (frame.jump !== undefined) this.currentInput.jump = Boolean(frame.jump);
-        if (frame.interact !== undefined) this.currentInput.interact = Boolean(frame.interact);
-        if (frame.pulse !== undefined) this.currentInput.pulse = Boolean(frame.pulse);
-        if (frame.dash !== undefined) this.currentInput.dash = Boolean(frame.dash);
+
+    if (externalInput) {
+      if (externalInput.move !== undefined) this.currentInput.move = [...externalInput.move];
+      if (externalInput.cam_yaw_deg !== undefined) this.currentInput.cam_yaw_deg = externalInput.cam_yaw_deg;
+      if (externalInput.jump !== undefined) this.currentInput.jump = Boolean(externalInput.jump);
+      if (externalInput.interact !== undefined) this.currentInput.interact = Boolean(externalInput.interact);
+      if (externalInput.pulse !== undefined) this.currentInput.pulse = Boolean(externalInput.pulse);
+      if (externalInput.dash !== undefined) this.currentInput.dash = Boolean(externalInput.dash);
+    } else {
+      // 1. Ingest input frame if matching current tick
+      while (this.frameIndex < this.inputFrames.length && this.inputFrames[this.frameIndex].tick <= currentTick) {
+        const frame = this.inputFrames[this.frameIndex];
+        if (frame.tick === currentTick) {
+          if (frame.move !== undefined) this.currentInput.move = [...frame.move];
+          if (frame.cam_yaw_deg !== undefined) this.currentInput.cam_yaw_deg = frame.cam_yaw_deg;
+          if (frame.jump !== undefined) this.currentInput.jump = Boolean(frame.jump);
+          if (frame.interact !== undefined) this.currentInput.interact = Boolean(frame.interact);
+          if (frame.pulse !== undefined) this.currentInput.pulse = Boolean(frame.pulse);
+          if (frame.dash !== undefined) this.currentInput.dash = Boolean(frame.dash);
+        }
+        this.frameIndex++;
       }
-      this.frameIndex++;
     }
 
     // Detect action triggers (false -> true)
