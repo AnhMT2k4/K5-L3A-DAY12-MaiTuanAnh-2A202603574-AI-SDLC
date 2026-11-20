@@ -45,8 +45,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (!foundFile) {
-    console.warn(`[404] Not Found: ${req.url}`);
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('404 Not Found');
     return;
   }
@@ -61,10 +60,26 @@ const server = http.createServer((req, res) => {
   fs.createReadStream(foundFile).pipe(res);
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`\n==============================================`);
-  console.log(`🏮 Đảo Đèn Lồng - Web 3D Server running!`);
-  console.log(`🎮 Open in browser: http://localhost:${PORT}`);
-  console.log(`==============================================\n`);
+let currentPort = parseInt(process.env.PORT || '3000', 10);
+
+function listen(port) {
+  server.listen(port, () => {
+    console.log(`\n==============================================`);
+    console.log(`🏮 Đảo Đèn Lồng - Web 3D Server running!`);
+    console.log(`🎮 Mở trên trình duyệt: http://localhost:${port}`);
+    console.log(`==============================================\n`);
+  });
+}
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    const nextPort = currentPort + 1;
+    console.warn(`⚠️ Cổng ${currentPort} đang bận, tự động chuyển sang cổng ${nextPort}...`);
+    currentPort = nextPort;
+    setTimeout(() => listen(nextPort), 200);
+  } else {
+    console.error('Server error:', err);
+  }
 });
+
+listen(currentPort);
