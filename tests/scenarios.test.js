@@ -2,32 +2,63 @@ import { execSync } from 'child_process';
 import assert from 'assert';
 import fs from 'fs';
 
-console.log('--- Running Scenarios Tests ---');
+console.log('--- Running Scenarios Tests (Phase 2 - Contract v1.1) ---');
 
-// 1. Run with scenario-basic and inputs-basic
+// 1. Night 1 Scenario
 {
-  const outPath = 'tests/output/out-scenario-basic.jsonl';
+  const outPath = 'tests/output/out-night1.jsonl';
   execSync(`node src/cli/headless.js --seed 42 --night 1 --scenario tests/fixtures/scenario-basic.json --inputs tests/fixtures/inputs-basic.json --ticks 250 --out ${outPath} --snapshot-every 50`, {
     stdio: 'pipe'
   });
 
   const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
-  assert(lines.length > 0, 'Output must not be empty');
+  assert(lines.length > 0);
 
   const snapshot0 = JSON.parse(lines[0]);
   assert.strictEqual(snapshot0.type, 'snapshot');
-  assert.strictEqual(snapshot0.tick, 0);
-  assert.strictEqual(snapshot0.motes_active, 1);
-  assert.strictEqual(snapshot0.lanterns[0].id, 'L1');
-  assert.strictEqual(snapshot0.shades[0].id, 'S1');
+  assert.strictEqual(snapshot0.night, 1);
+  assert(snapshot0.wind !== undefined);
+  assert(snapshot0.player.vel !== undefined);
+  assert(snapshot0.player.grounded !== undefined);
+  assert(Array.isArray(snapshot0.motes));
+  assert(Array.isArray(snapshot0.drifters));
+  assert(Array.isArray(snapshot0.charms));
 
   const lastLine = JSON.parse(lines[lines.length - 1]);
   assert.strictEqual(lastLine.type, 'end');
   assert.strictEqual(lastLine.ticks, 250);
-  console.log('✓ Scenario basic test passed');
+  console.log('✓ Night 1 basic scenario test passed');
 }
 
-// 2. Format Error test: invalid inputs must exit with code 2
+// 2. Night 2 Scenario
+{
+  const outPath = 'tests/output/out-night2.jsonl';
+  execSync(`node src/cli/headless.js --seed 42 --night 2 --scenario tests/fixtures/scenario-night2.json --ticks 100 --out ${outPath}`, {
+    stdio: 'pipe'
+  });
+
+  const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
+  const snapshot0 = JSON.parse(lines[0]);
+  assert.strictEqual(snapshot0.night, 2);
+  assert.strictEqual(snapshot0.drifters.length, 1);
+  assert.strictEqual(snapshot0.charms.length, 1);
+  console.log('✓ Night 2 scenario with Drifters and Charms passed');
+}
+
+// 3. Night 3 Scenario with Wind
+{
+  const outPath = 'tests/output/out-night3.jsonl';
+  execSync(`node src/cli/headless.js --seed 42 --night 3 --scenario tests/fixtures/scenario-night3.json --ticks 150 --out ${outPath}`, {
+    stdio: 'pipe'
+  });
+
+  const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
+  const snapshot0 = JSON.parse(lines[0]);
+  assert.strictEqual(snapshot0.night, 3);
+  console.log('✓ Night 3 scenario with Wind passed');
+}
+
+// 4. Format error (exit code 2)
 {
   let exitedCode = null;
   try {

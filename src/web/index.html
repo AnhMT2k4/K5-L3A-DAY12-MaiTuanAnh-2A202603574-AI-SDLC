@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng - Đêm 1: Đảo Bến</title>
+  <title>Đảo Đèn Lồng - Phase 2: Ba Hòn Đảo</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -35,40 +35,94 @@
         <div id="flames-container" class="val-flames">🔥🔥🔥</div>
       </div>
       <div class="hud-card">
-        <span class="label">ĐOM ĐÓM MANG THEO</span>
-        <div id="carried-display" class="val">✨ 0 / 5</div>
+        <span class="label">ĐOM ĐÓM</span>
+        <div id="carried-display" class="val">✨ 0 / 10</div>
       </div>
       <div class="hud-card">
-        <span class="label">ĐÈN LỒNG ĐÃ THẮP</span>
+        <span class="label">ĐÈN LỒNG</span>
         <div id="lanterns-display" class="val">🏮 0 / 5</div>
       </div>
       <div class="hud-card">
-        <span class="label">THỜI GIAN CÒN LẠI</span>
-        <div id="time-display" class="val">⏱️ 180s</div>
+        <span class="label">THỜI GIAN</span>
+        <div id="time-display" class="val">⏱️ 300s</div>
       </div>
       <div class="hud-card">
         <span class="label">ĐIỂM SỐ</span>
         <div id="score-display" class="val highlight">⭐ 0</div>
       </div>
+      <div id="wind-card" class="hud-card hidden">
+        <span class="label">GIÓ LẠC</span>
+        <div id="wind-display" class="val">💨 Yên</div>
+      </div>
+    </div>
+
+    <!-- Skill Cooldowns & Charm Indicator (Bottom Right) -->
+    <div id="skills-hud">
+      <div id="charm-indicator" class="skill-badge hidden">
+        <div class="badge-icon">🍃</div>
+        <div class="badge-info">
+          <span class="badge-name">BÙA GIÓ</span>
+          <span id="charm-timer-val" class="badge-cd">10.0s</span>
+        </div>
+      </div>
+      <div class="skill-badge" id="dash-badge">
+        <div class="badge-icon">⚡</div>
+        <div class="badge-info">
+          <span class="badge-name">LƯỚT [Shift/Q]</span>
+          <span id="dash-cd-val" class="badge-cd ready">SẴN SÀNG</span>
+        </div>
+      </div>
+      <div class="skill-badge" id="pulse-badge">
+        <div class="badge-icon">✨</div>
+        <div class="badge-info">
+          <span class="badge-name">TỎA SÁNG [E]</span>
+          <span id="pulse-cd-val" class="badge-cd ready">SẴN SÀNG</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Night Selector & Top Bar Controls -->
+    <div id="top-bar-controls">
+      <div class="night-selector">
+        <button class="btn-night active" data-night="1">Đêm 1: Đảo Bến</button>
+        <button class="btn-night" data-night="2">Đêm 2: Đảo Cau</button>
+        <button class="btn-night" data-night="3">Đêm 3: Đảo Chuông</button>
+      </div>
+      <button id="btn-pause-toggle" class="btn-pause">⏸️ [P/Esc]</button>
     </div>
 
     <!-- Controls prompt -->
     <div id="controls-hint">
-      <b>WASD / Mũi tên:</b> Di chuyển | <b>Chuột:</b> Xoay camera | <b>E:</b> Tỏa sáng (xua bóng mực) | <b>F:</b> Nạp đèn | <b>Space:</b> Nhảy
+      <b>WASD / Mũi tên:</b> Di chuyển | <b>Shift / Q:</b> Lướt | <b>Space:</b> Nhảy | <b>E:</b> Tỏa sáng (xua bóng mực) | <b>F:</b> Nạp đèn | <b>P/Esc:</b> Tạm dừng
     </div>
 
     <!-- Interaction Banner -->
     <div id="prompt-banner" class="hidden">Nhấn [F] để nạp ánh sáng vào Đèn Lồng</div>
 
-    <!-- Game Over Modal -->
+    <!-- Pause Modal -->
+    <div id="pause-modal" class="modal hidden">
+      <div class="modal-content">
+        <h2>TẠM DỪNG</h2>
+        <p>Game đang tạm dừng. Sim tick và mọi bộ đếm đều đứng yên.</p>
+        <div class="modal-buttons">
+          <button id="btn-resume" class="btn-primary">TIẾP TỤC</button>
+          <button id="btn-pause-restart" class="btn-secondary">CHƠI LẠI ĐÊM NÀY</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
     <div id="game-modal" class="modal hidden">
       <div class="modal-content">
         <h2 id="modal-title">CHIẾN THẮNG!</h2>
-        <p id="modal-desc">Bạn đã thắp sáng toàn bộ Đèn Lồng Lớn trên Đảo Bến, xua tan sương đen!</p>
+        <p id="modal-desc">Bạn đã thắp sáng toàn bộ Đèn Lồng Lớn, xua tan sương đen!</p>
         <div class="modal-stats">
           <div>Điểm chung cuộc: <span id="final-score" class="highlight">0</span></div>
         </div>
-        <button id="btn-restart" class="btn-primary">CHƠI LẠI ĐÊM 1</button>
+        <div class="modal-buttons">
+          <button id="btn-restart" class="btn-primary">CHƠI LẠI</button>
+          <button id="btn-next-night" class="btn-secondary hidden">SANG ĐÊM TIẾP THEO ➔</button>
+        </div>
       </div>
     </div>
   </div>

@@ -49,6 +49,14 @@ export function loadScenarioFile(filePath) {
     throw new FormatError('lanterns in scenario must be an array');
   }
 
+  if (data.drifters !== undefined && !Array.isArray(data.drifters)) {
+    throw new FormatError('drifters in scenario must be an array');
+  }
+
+  if (data.charms !== undefined && !Array.isArray(data.charms)) {
+    throw new FormatError('charms in scenario must be an array');
+  }
+
   return data;
 }
 

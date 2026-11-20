@@ -111,7 +111,7 @@ function main() {
     lines.push(JSON.stringify(sim.getSnapshot()));
 
     let stepsRun = 0;
-    while (stepsRun < opts.ticks && sim.state === 'playing') {
+    while (stepsRun < opts.ticks && sim.state !== 'won' && sim.state !== 'lost') {
       const events = sim.step();
       stepsRun++;
 
