@@ -1,17 +1,63 @@
 import * as THREE from './vendor/three.module.js';
 import { GameSimulation } from './core/simulation.js';
-import { MAPS, PALETTE, COLORBLIND_PALETTE, DEFAULT_TUNING } from './core/constants.js';
+import { MAPS, PALETTE, COLORBLIND_PALETTE } from './core/constants.js';
 import { sound } from './audio.js';
 
-console.log('🏮 Initializing Đảo Đèn Lồng 3D Web Engine (Phase 3 - Contract v1.2: Đèn cạn dầu)...');
+console.log('🏮 Initializing Đảo Đèn Lồng 3D Web Engine (Phase 4 - Release v1.0.0)...');
 
-// Colorblind state
+// --- 1. ACCESSIBILITY & SETTINGS STATE ---
 let isColorblind = localStorage.getItem('colorblind_mode') === 'true';
+let isReducedMotion = localStorage.getItem('reduced_motion') === 'true';
+let isLargeText = localStorage.getItem('large_text') === 'true';
+
 function getActivePalette() {
   return isColorblind ? COLORBLIND_PALETTE : PALETTE;
 }
 
-// DOM elements
+// --- 2. KEY REBINDING CONFIGURATION ---
+const DEFAULT_KEYBINDS = {
+  moveUp: ['KeyW', 'ArrowUp'],
+  moveDown: ['KeyS', 'ArrowDown'],
+  moveLeft: ['KeyA', 'ArrowLeft'],
+  moveRight: ['KeyD', 'ArrowRight'],
+  jump: ['Space'],
+  dash: ['ShiftLeft', 'ShiftRight', 'KeyQ'],
+  interact: ['KeyF', 'Enter'],
+  pulse: ['KeyE'],
+  pause: ['KeyP', 'Escape']
+};
+
+const ACTION_NAMES = {
+  moveUp: 'Di chuyển Lên',
+  moveDown: 'Di chuyển Xuống',
+  moveLeft: 'Di chuyển Trái',
+  moveRight: 'Di chuyển Phải',
+  jump: 'Nhảy',
+  dash: 'Lướt (Dash)',
+  interact: 'Nạp / Châm dầu',
+  pulse: 'Tỏa sáng (Pulse)',
+  pause: 'Tạm dừng'
+};
+
+let userKeybinds = null;
+try {
+  const saved = localStorage.getItem('dao_den_long_keybinds');
+  userKeybinds = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_KEYBINDS));
+} catch (e) {
+  userKeybinds = JSON.parse(JSON.stringify(DEFAULT_KEYBINDS));
+}
+
+function saveKeybinds() {
+  localStorage.setItem('dao_den_long_keybinds', JSON.stringify(userKeybinds));
+  updateControlHints();
+}
+
+function isActionTriggered(actionKey, pressedKeys) {
+  const codes = userKeybinds[actionKey] || [];
+  return codes.some(code => pressedKeys[code]);
+}
+
+// --- 3. DOM ELEMENTS ---
 const canvas = document.getElementById('game-canvas');
 const flamesEl = document.getElementById('flames-container');
 const carriedEl = document.getElementById('carried-display');
@@ -21,21 +67,36 @@ const scoreEl = document.getElementById('score-display');
 const windCard = document.getElementById('wind-card');
 const windDisplay = document.getElementById('wind-display');
 const promptEl = document.getElementById('prompt-banner');
+const controlsHintEl = document.getElementById('controls-hint');
 
-// Skill Cooldowns
+// Skill Badges
 const dashBadge = document.getElementById('dash-badge');
 const dashCdVal = document.getElementById('dash-cd-val');
+const dashBadgeLabel = document.getElementById('dash-badge-label');
 const pulseBadge = document.getElementById('pulse-badge');
 const pulseCdVal = document.getElementById('pulse-cd-val');
+const pulseBadgeLabel = document.getElementById('pulse-badge-label');
 const charmIndicator = document.getElementById('charm-indicator');
 const charmTimerVal = document.getElementById('charm-timer-val');
 
-// Modals & Controls
+// Visual Warning Banners
+const windWarningBanner = document.getElementById('wind-warning-banner');
+const countdownBanner = document.getElementById('countdown-banner');
+const shadeOverlay = document.getElementById('shade-indicators-overlay');
+
+// Top Bar Buttons
+const btnPauseToggle = document.getElementById('btn-pause-toggle');
+const btnColorblindToggle = document.getElementById('btn-colorblind-toggle');
+const btnLeaderboardToggle = document.getElementById('btn-leaderboard-toggle');
+const btnKeybindsToggle = document.getElementById('btn-keybinds-toggle');
+const btnMotionToggle = document.getElementById('btn-motion-toggle');
+const btnFontsizeToggle = document.getElementById('btn-fontsize-toggle');
+const nightButtons = document.querySelectorAll('.btn-night');
+
+// Modals
 const pauseModal = document.getElementById('pause-modal');
 const btnResume = document.getElementById('btn-resume');
 const btnPauseRestart = document.getElementById('btn-pause-restart');
-const btnPauseToggle = document.getElementById('btn-pause-toggle');
-const btnColorblindToggle = document.getElementById('btn-colorblind-toggle');
 
 const gameModal = document.getElementById('game-modal');
 const modalTitle = document.getElementById('modal-title');
@@ -43,36 +104,49 @@ const modalDesc = document.getElementById('modal-desc');
 const finalScoreEl = document.getElementById('final-score');
 const btnRestart = document.getElementById('btn-restart');
 const btnNextNight = document.getElementById('btn-next-night');
-const nightButtons = document.querySelectorAll('.btn-night');
 
-// Sync Colorblind mode on document
-function applyColorblindClass() {
-  if (isColorblind) {
-    document.body.classList.add('colorblind');
-    btnColorblindToggle.textContent = '👁️ Bảng màu dễ phân biệt: Bật';
-    btnColorblindToggle.classList.add('active');
-  } else {
-    document.body.classList.remove('colorblind');
-    btnColorblindToggle.textContent = '👁️ Bảng màu dễ phân biệt: Tắt';
-    btnColorblindToggle.classList.remove('active');
-  }
+const playerNameInput = document.getElementById('player-name-input');
+const btnSubmitScore = document.getElementById('btn-submit-score');
+const saveScoreStatus = document.getElementById('save-score-status');
+
+// Leaderboard Modal
+const leaderboardModal = document.getElementById('leaderboard-modal');
+const leaderboardTbody = document.getElementById('leaderboard-tbody');
+const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+
+// Key Rebinding Modal
+const keybindsModal = document.getElementById('keybinds-modal');
+const keybindsContainer = document.getElementById('keybinds-container');
+const keybindsAlert = document.getElementById('keybinds-alert');
+const btnResetKeybinds = document.getElementById('btn-reset-keybinds');
+const btnCloseKeybinds = document.getElementById('btn-close-keybinds');
+
+// --- 4. ACCESSIBILITY TOGGLE HANDLERS ---
+function applyAccessibilityClasses() {
+  document.body.classList.toggle('colorblind', isColorblind);
+  btnColorblindToggle.textContent = `👁️ Bảng màu dễ phân biệt: ${isColorblind ? 'Bật' : 'Tắt'}`;
+  btnColorblindToggle.classList.toggle('active', isColorblind);
+
+  document.body.classList.toggle('reduced-motion', isReducedMotion);
+  btnMotionToggle.textContent = `🌊 Giảm chuyển động: ${isReducedMotion ? 'Bật' : 'Tắt'}`;
+  btnMotionToggle.classList.toggle('active', isReducedMotion);
+
+  document.body.classList.toggle('large-text', isLargeText);
+  btnFontsizeToggle.textContent = `🔍 Chữ lớn (x1.25): ${isLargeText ? 'Bật' : 'Tắt'}`;
+  btnFontsizeToggle.classList.toggle('active', isLargeText);
 }
-applyColorblindClass();
+applyAccessibilityClasses();
 
 btnColorblindToggle.addEventListener('click', () => {
   isColorblind = !isColorblind;
-  localStorage.setItem('colorblind_mode', isColorblind ? 'true' : 'false');
-  applyColorblindClass();
-  // Refresh shade colors
+  localStorage.setItem('colorblind_mode', String(isColorblind));
+  applyAccessibilityClasses();
+  // Refresh shade visual colors
   for (const [id, mesh] of shadeMeshes.entries()) {
     const s = sim.shades.find(item => item.id === id);
     if (s && mesh) {
       const pal = getActivePalette();
-      if (s.state === 'stunned') {
-        mesh.orb.material.color.set(pal.shadeStunned);
-      } else {
-        mesh.orb.material.color.set(pal.shadeBody);
-      }
+      mesh.orb.material.color.set(s.state === 'stunned' ? pal.shadeStunned : pal.shadeBody);
       mesh.orb.material.emissive.set(pal.shadeBorder);
       mesh.eye1.material.color.set(pal.shadeBorder);
       mesh.eye2.material.color.set(pal.shadeBorder);
@@ -80,7 +154,207 @@ btnColorblindToggle.addEventListener('click', () => {
   }
 });
 
-// Setup Canvas & Renderer
+btnMotionToggle.addEventListener('click', () => {
+  isReducedMotion = !isReducedMotion;
+  localStorage.setItem('reduced_motion', String(isReducedMotion));
+  applyAccessibilityClasses();
+});
+
+btnFontsizeToggle.addEventListener('click', () => {
+  isLargeText = !isLargeText;
+  localStorage.setItem('large_text', String(isLargeText));
+  applyAccessibilityClasses();
+});
+
+function updateControlHints() {
+  const k = userKeybinds;
+  const dashKey = k.dash[0]?.replace('Key', '') || 'Shift';
+  const pulseKey = k.pulse[0]?.replace('Key', '') || 'E';
+  const interactKey = k.interact[0]?.replace('Key', '') || 'F';
+  if (dashBadgeLabel) dashBadgeLabel.textContent = `LƯỚT [${dashKey}]`;
+  if (pulseBadgeLabel) pulseBadgeLabel.textContent = `TỎA SÁNG [${pulseKey}]`;
+  if (controlsHintEl) {
+    controlsHintEl.innerHTML = `<b>Di chuyển:</b> ${k.moveUp[0]}/${k.moveDown[0]}/${k.moveLeft[0]}/${k.moveRight[0]} | <b>Lướt:</b> ${dashKey} | <b>Nhảy:</b> Space | <b>Tỏa sáng:</b> ${pulseKey} | <b>Nạp:</b> ${interactKey} | <b>P/Esc:</b> Tạm dừng`;
+  }
+}
+updateControlHints();
+
+// --- 5. KEY REBINDING MODAL LOGIC ---
+let activeRecordingAction = null;
+
+function renderKeybindsUI() {
+  keybindsContainer.innerHTML = '';
+  keybindsAlert.classList.add('hidden');
+
+  for (const [actionKey, actionLabel] of Object.entries(ACTION_NAMES)) {
+    const row = document.createElement('div');
+    row.className = 'keybind-row';
+
+    const label = document.createElement('span');
+    label.textContent = actionLabel;
+    row.appendChild(label);
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-keybind';
+    const keysList = userKeybinds[actionKey] || [];
+    btn.textContent = keysList.map(k => k.replace('Key', '').replace('Arrow', 'Mũi tên ')).join(' / ') || 'Chưa gán';
+
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-keybind').forEach(b => b.classList.remove('recording'));
+      btn.classList.add('recording');
+      btn.textContent = 'Nhấn phím mới...';
+      activeRecordingAction = actionKey;
+      keybindsAlert.classList.add('hidden');
+    });
+
+    row.appendChild(btn);
+    keybindsContainer.appendChild(row);
+  }
+}
+
+window.addEventListener('keydown', e => {
+  if (activeRecordingAction) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const newCode = e.code;
+    let conflictAction = null;
+
+    // Check for key conflicts
+    for (const [action, codes] of Object.entries(userKeybinds)) {
+      if (action !== activeRecordingAction && codes.includes(newCode)) {
+        conflictAction = ACTION_NAMES[action];
+        break;
+      }
+    }
+
+    if (conflictAction) {
+      keybindsAlert.textContent = `⚠️ Phím "${newCode}" đã được dùng cho "${conflictAction}"! Vui lòng chọn phím khác.`;
+      keybindsAlert.classList.remove('hidden');
+    } else {
+      userKeybinds[activeRecordingAction] = [newCode];
+      saveKeybinds();
+      activeRecordingAction = null;
+      renderKeybindsUI();
+    }
+  }
+});
+
+btnKeybindsToggle.addEventListener('click', () => {
+  renderKeybindsUI();
+  keybindsModal.classList.remove('hidden');
+});
+
+btnCloseKeybinds.addEventListener('click', () => {
+  activeRecordingAction = null;
+  keybindsModal.classList.add('hidden');
+});
+
+btnResetKeybinds.addEventListener('click', () => {
+  userKeybinds = JSON.parse(JSON.stringify(DEFAULT_KEYBINDS));
+  saveKeybinds();
+  renderKeybindsUI();
+});
+
+// --- 6. LEADERBOARD SYSTEM ---
+async function fetchLeaderboard() {
+  try {
+    const res = await fetch('/api/leaderboard');
+    if (res.ok) {
+      const data = await res.json();
+      return data.entries || [];
+    }
+  } catch (err) {
+    console.warn('Cannot fetch from /api/leaderboard, using localStorage:', err);
+  }
+  const local = localStorage.getItem('dao_den_long_leaderboard');
+  return local ? JSON.parse(local) : [];
+}
+
+async function renderLeaderboardTable() {
+  leaderboardTbody.innerHTML = '<tr><td colspan="5">Đang tải bảng xếp hạng...</td></tr>';
+  const entries = await fetchLeaderboard();
+  leaderboardTbody.innerHTML = '';
+
+  if (!entries || entries.length === 0) {
+    leaderboardTbody.innerHTML = '<tr><td colspan="5">Chưa có ai lưu điểm. Hãy là người đầu tiên!</td></tr>';
+    return;
+  }
+
+  entries.forEach((e, idx) => {
+    const tr = document.createElement('tr');
+    const medal = idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : `#${idx + 1}`;
+    const dateStr = e.achieved_at ? new Date(e.achieved_at).toLocaleDateString('vi-VN') : 'Mới';
+    tr.innerHTML = `
+      <td><b>${medal}</b></td>
+      <td><b>${escapeHtml(e.name)}</b></td>
+      <td class="highlight"><b>${e.score}</b></td>
+      <td>${e.nights_won ?? 0}/3</td>
+      <td>${dateStr}</td>
+    `;
+    leaderboardTbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+btnLeaderboardToggle.addEventListener('click', () => {
+  renderLeaderboardTable();
+  leaderboardModal.classList.remove('hidden');
+});
+
+btnCloseLeaderboard.addEventListener('click', () => {
+  leaderboardModal.classList.add('hidden');
+});
+
+// Submit score from Game Over Modal
+btnSubmitScore.addEventListener('click', async () => {
+  const name = playerNameInput.value.trim();
+  const nameRegex = /^[A-Za-z0-9_]{3,12}$/;
+  if (!nameRegex.test(name)) {
+    saveScoreStatus.style.color = '#FF5A5F';
+    saveScoreStatus.textContent = '❌ Tên phải từ 3-12 ký tự [A-Za-z0-9_]!';
+    return;
+  }
+
+  const nightsWon = sim.state === 'won' ? currentNight : (currentNight - 1);
+  const entry = {
+    name,
+    score: sim.score,
+    nights_won: Math.max(0, nightsWon),
+    seed: sim.seed
+  };
+
+  try {
+    const res = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry)
+    });
+    if (res.ok) {
+      saveScoreStatus.style.color = '#10B981';
+      saveScoreStatus.textContent = '✅ Đã lưu điểm thành công vào Bảng Xếp Hạng!';
+      btnSubmitScore.disabled = true;
+      return;
+    }
+  } catch (err) {
+    console.warn('API error, saving to localStorage:', err);
+  }
+
+  // Fallback to localStorage
+  const existing = JSON.parse(localStorage.getItem('dao_den_long_leaderboard') || '[]');
+  existing.push({ ...entry, achieved_at: new Date().toISOString() });
+  existing.sort((a, b) => b.score !== a.score ? b.score - a.score : new Date(a.achieved_at) - new Date(b.achieved_at));
+  localStorage.setItem('dao_den_long_leaderboard', JSON.stringify(existing.slice(0, 10)));
+
+  saveScoreStatus.style.color = '#10B981';
+  saveScoreStatus.textContent = '✅ Đã lưu điểm thành công vào máy!';
+  btnSubmitScore.disabled = true;
+});
+
+// --- 7. THREE.JS 3D SCENE SETUP ---
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -88,7 +362,6 @@ let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 } catch (e) {
-  console.warn('WebGL with antialias failed, falling back:', e);
   renderer = new THREE.WebGLRenderer({ canvas });
 }
 
@@ -98,9 +371,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 try {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-} catch (e) {
-  console.warn('Shadow map disabled:', e);
-}
+} catch (e) {}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PALETTE.nightSky);
@@ -203,7 +474,7 @@ const dashAuraMesh = new THREE.Mesh(dashAuraGeo, dashAuraMat);
 dashAuraMesh.position.y = 0.7;
 playerGroup.add(dashAuraMesh);
 
-// Current Game State
+// --- 8. SIMULATION INSTANCE & ENTITY MESHES ---
 let currentNight = 1;
 let sim = new GameSimulation({ seed: Date.now(), night: currentNight });
 
@@ -225,12 +496,6 @@ function buildTerrain(night) {
     roughness: 0.85,
     metalness: 0.05
   });
-
-  const cliffMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(PALETTE.fog),
-    roughness: 0.95
-  });
-
   const woodMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(PALETTE.wood),
     roughness: 0.8
@@ -327,18 +592,15 @@ function buildTerrain(night) {
   }
 }
 
-// Build 3D Big Lanterns with 3D Fuel Bar (Phase 3)
+// Build 3D Big Lanterns with 3D Fuel Bar (Phase 3 & 4)
 function initLanternsVisual() {
-  for (const item of lanternMeshes.values()) {
-    scene.remove(item.group);
-  }
+  for (const item of lanternMeshes.values()) scene.remove(item.group);
   lanternMeshes.clear();
 
   sim.lanterns.forEach(l => {
     const lGroup = new THREE.Group();
     lGroup.position.set(l.pos[0], l.pos[1], l.pos[2]);
 
-    // Stone base pedestal
     const baseGeo = new THREE.CylinderGeometry(0.9, 1.2, 0.7, 8);
     const baseMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
@@ -347,7 +609,6 @@ function initLanternsVisual() {
     baseMesh.receiveShadow = true;
     lGroup.add(baseMesh);
 
-    // Wooden pillar
     const poleGeo = new THREE.CylinderGeometry(0.25, 0.3, 2.5, 8);
     const poleMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
     const poleMesh = new THREE.Mesh(poleGeo, poleMat);
@@ -355,7 +616,6 @@ function initLanternsVisual() {
     poleMesh.castShadow = true;
     lGroup.add(poleMesh);
 
-    // Lantern chamber
     const chamberGeo = new THREE.CylinderGeometry(0.7, 0.55, 1.1, 6);
     const chamberMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(PALETTE.unlitLantern),
@@ -367,7 +627,6 @@ function initLanternsVisual() {
     chamberMesh.position.y = 3.3;
     lGroup.add(chamberMesh);
 
-    // Pagoda roof
     const roofGeo = new THREE.ConeGeometry(1.1, 0.5, 6);
     const roofMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.7 });
     const roofMesh = new THREE.Mesh(roofGeo, roofMat);
@@ -375,7 +634,6 @@ function initLanternsVisual() {
     roofMesh.castShadow = true;
     lGroup.add(roofMesh);
 
-    // Point light for lit state
     const pLight = new THREE.PointLight(new THREE.Color(PALETTE.litLantern), 0, 22);
     pLight.position.set(0, 3.3, 0);
     lGroup.add(pLight);
@@ -409,11 +667,8 @@ function initLanternsVisual() {
   });
 }
 
-// Build 3D Jump Pads
 function initJumpPadsVisual() {
-  for (const padMesh of jumpPadMeshes.values()) {
-    scene.remove(padMesh);
-  }
+  for (const padMesh of jumpPadMeshes.values()) scene.remove(padMesh);
   jumpPadMeshes.clear();
 
   sim.jumpPads.forEach(pad => {
@@ -422,8 +677,7 @@ function initJumpPadsVisual() {
 
     const rimGeo = new THREE.CylinderGeometry(pad.radius, pad.radius + 0.2, 0.15, 24);
     const rimMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.4, metalness: 0.2 });
-    const rimMesh = new THREE.Mesh(rimGeo, rimMat);
-    padGroup.add(rimMesh);
+    padGroup.add(new THREE.Mesh(rimGeo, rimMat));
 
     const runeGeo = new THREE.CircleGeometry(pad.radius * 0.85, 24);
     const runeMat = new THREE.MeshBasicMaterial({ color: 0x34d399, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
@@ -441,11 +695,8 @@ function initJumpPadsVisual() {
   });
 }
 
-// Build 3D Charms
 function initCharmsVisual() {
-  for (const charmMesh of charmMeshes.values()) {
-    scene.remove(charmMesh);
-  }
+  for (const charmMesh of charmMeshes.values()) scene.remove(charmMesh);
   charmMeshes.clear();
 
   sim.charms.forEach(c => {
@@ -459,8 +710,7 @@ function initCharmsVisual() {
       emissiveIntensity: 0.4,
       roughness: 0.3
     });
-    const leafMesh = new THREE.Mesh(leafGeo, leafMat);
-    group.add(leafMesh);
+    group.add(new THREE.Mesh(leafGeo, leafMat));
 
     const cLight = new THREE.PointLight(new THREE.Color(PALETTE.goldBorderScore), 1.8, 5);
     group.add(cLight);
@@ -470,7 +720,6 @@ function initCharmsVisual() {
   });
 }
 
-// Start Night function
 function startNight(nightNumber) {
   currentNight = nightNumber;
   nightButtons.forEach(btn => {
@@ -494,9 +743,15 @@ function startNight(nightNumber) {
   windCard.classList.toggle('hidden', currentNight !== 3);
   gameModal.classList.add('hidden');
   pauseModal.classList.add('hidden');
+  leaderboardModal.classList.add('hidden');
+  keybindsModal.classList.add('hidden');
+
+  btnSubmitScore.disabled = false;
+  saveScoreStatus.textContent = '';
+  playerNameInput.value = '';
 }
 
-// Input tracking
+// --- 9. INPUT & CAMERA CONTROLS ---
 const keys = {};
 let camYaw = 0;
 let camPitch = 0.35;
@@ -504,16 +759,19 @@ let isMouseDown = false;
 let mouseX = 0, mouseY = 0;
 
 window.addEventListener('keydown', e => {
+  if (activeRecordingAction) return; // intercepted by keybind modal
   keys[e.code] = true;
+
   if (['Space', 'KeyE', 'KeyF', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'ShiftLeft', 'ShiftRight', 'KeyP', 'Escape'].includes(e.code)) {
     e.preventDefault();
   }
-  if (e.code === 'KeyP' || e.code === 'Escape') {
+  if (isActionTriggered('pause', { [e.code]: true })) {
     togglePause();
   }
 });
 
 window.addEventListener('keyup', e => {
+  if (activeRecordingAction) return;
   keys[e.code] = false;
 });
 
@@ -553,26 +811,19 @@ btnPauseRestart.addEventListener('click', () => {
   pauseModal.classList.add('hidden');
   startNight(currentNight);
 });
-
 btnRestart.addEventListener('click', () => {
   gameModal.classList.add('hidden');
   startNight(currentNight);
 });
-
 btnNextNight.addEventListener('click', () => {
   gameModal.classList.add('hidden');
-  const next = currentNight < 3 ? currentNight + 1 : 1;
-  startNight(next);
+  startNight(currentNight < 3 ? currentNight + 1 : 1);
 });
-
 nightButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const n = parseInt(btn.dataset.night, 10);
-    startNight(n);
-  });
+  btn.addEventListener('click', () => startNight(parseInt(btn.dataset.night, 10)));
 });
 
-// Update Motes Meshes
+// --- 10. VISUAL ENTITY UPDATES ---
 function updateMotesVisual() {
   for (const m of sim.motes) {
     let mesh = moteMeshes.get(m.id);
@@ -580,8 +831,7 @@ function updateMotesVisual() {
       const group = new THREE.Group();
       const geo = new THREE.SphereGeometry(0.25, 12, 12);
       const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(PALETTE.moteCore) });
-      const orb = new THREE.Mesh(geo, mat);
-      group.add(orb);
+      group.add(new THREE.Mesh(geo, mat));
 
       const mLight = new THREE.PointLight(new THREE.Color(PALETTE.moteHalo), 1.2, 4);
       group.add(mLight);
@@ -602,7 +852,6 @@ function updateMotesVisual() {
   }
 }
 
-// Update Shades Meshes
 function updateShadesVisual(nowSec) {
   const pal = getActivePalette();
 
@@ -610,7 +859,6 @@ function updateShadesVisual(nowSec) {
     let item = shadeMeshes.get(s.id);
     if (!item) {
       const group = new THREE.Group();
-
       const geo = new THREE.SphereGeometry(0.7, 16, 16);
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(pal.shadeBody),
@@ -631,7 +879,6 @@ function updateShadesVisual(nowSec) {
       group.add(eye1);
       group.add(eye2);
 
-      // Drain beam / aura
       const drainGeo = new THREE.CylinderGeometry(0.1, 0.4, 2.0, 8);
       const drainMat = new THREE.MeshBasicMaterial({
         color: 0xa855f7,
@@ -656,7 +903,6 @@ function updateShadesVisual(nowSec) {
       item.drainMesh.material.opacity = 0;
     } else if (s.state === 'drain') {
       item.orb.material.color.set(new THREE.Color(pal.shadeBody));
-      // Show drain beam pulsing
       item.drainMesh.material.opacity = 0.5 + Math.sin(nowSec * 8) * 0.3;
     } else {
       item.orb.material.color.set(new THREE.Color(pal.shadeBody));
@@ -665,7 +911,6 @@ function updateShadesVisual(nowSec) {
   }
 }
 
-// Update Drifters Meshes
 function updateDriftersVisual() {
   for (const d of sim.drifters) {
     let mesh = drifterMeshes.get(d.id);
@@ -701,7 +946,6 @@ function updateDriftersVisual() {
   }
 }
 
-// Update Charms Visual
 function updateCharmsVisual() {
   for (const c of sim.charms) {
     const mesh = charmMeshes.get(c.id);
@@ -715,7 +959,6 @@ function updateCharmsVisual() {
   }
 }
 
-// Update Lanterns Visual & Fuel Bar (Phase 3)
 function updateLanternsVisual(nowSec) {
   let litCount = 0;
 
@@ -727,16 +970,12 @@ function updateLanternsVisual(nowSec) {
         litCount++;
         item.chamber.scale.set(1.0, 1.0, 1.0);
         item.barGroup.visible = true;
-
-        // Billboarding fuel bar towards camera
         item.barGroup.quaternion.copy(camera.quaternion);
 
-        // Scale fill bar
         const fillScale = Math.max(0.01, Math.min(1.0, fuelVal / 100.0));
         item.barFill.scale.set(fillScale, 1, 1);
         item.barFill.position.x = -(1.0 - fillScale) * 0.68;
 
-        // Check fuel < 30 (nhấp nháy chậm 1 Hz)
         if (fuelVal < 30.0) {
           const blink = (Math.sin(nowSec * Math.PI * 2) > 0);
           item.barFillMat.color.set(blink ? 0xef4444 : 0x7f1d1d);
@@ -751,7 +990,6 @@ function updateLanternsVisual(nowSec) {
         item.chamber.material.color.set(new THREE.Color(PALETTE.litLantern));
         item.chamber.material.emissive = new THREE.Color(PALETTE.litLantern);
       } else {
-        // Đèn tắt: xẹp 20% (scale y: 0.8), fuel bar tắt
         item.chamber.scale.set(1.0, 0.8, 1.0);
         item.barGroup.visible = false;
         item.light.intensity = 0;
@@ -761,15 +999,57 @@ function updateLanternsVisual(nowSec) {
     }
   }
 
-  // Ambient light formula
   ambientLight.intensity = 0.15 + 0.55 * (litCount / sim.lanterns.length);
 }
 
-// Start first night
+// --- 11. ACCESSIBILITY: OFF-SCREEN SHADE INDICATORS ---
+function updateOffscreenShadeIndicators() {
+  shadeOverlay.innerHTML = '';
+  const camPos = camera.position;
+  const pPos = sim.player.pos;
+
+  for (const s of sim.shades) {
+    // Only alert for shades within 18m
+    const distToPlayer = Math.hypot(s.pos[0] - pPos[0], s.pos[2] - pPos[2]);
+    if (distToPlayer > 18.0) continue;
+
+    // Project 3D shade position to NDC (-1 to 1)
+    const shadeVec = new THREE.Vector3(s.pos[0], s.pos[1] + 1.0, s.pos[2]);
+    shadeVec.project(camera);
+
+    // Check if behind camera or outside view screen
+    const isOffscreen = (shadeVec.z > 1.0 || Math.abs(shadeVec.x) > 0.92 || Math.abs(shadeVec.y) > 0.92);
+
+    if (isOffscreen) {
+      let nx = shadeVec.x;
+      let ny = shadeVec.y;
+      if (shadeVec.z > 1.0) {
+        nx = -nx;
+        ny = -ny;
+      }
+      const angle = Math.atan2(ny, nx);
+      const edgeDist = 0.88;
+      const clampedX = Math.cos(angle) * edgeDist;
+      const clampedY = Math.sin(angle) * edgeDist;
+
+      const screenX = ((clampedX + 1) / 2) * window.innerWidth;
+      const screenY = ((-clampedY + 1) / 2) * window.innerHeight;
+
+      const arrow = document.createElement('div');
+      arrow.className = 'shade-arrow';
+      arrow.style.left = `${screenX}px`;
+      arrow.style.top = `${screenY}px`;
+      arrow.innerHTML = '👾';
+      shadeOverlay.appendChild(arrow);
+    }
+  }
+}
+
+// --- 12. GAME ANIMATION LOOP ---
 startNight(1);
 
-// Game Loop
 let lastTime = performance.now();
+
 function animate(currentTime) {
   requestAnimationFrame(animate);
 
@@ -780,19 +1060,19 @@ function animate(currentTime) {
   if (sim.state === 'playing') {
     let moveX = 0;
     let moveZ = 0;
-    if (keys['KeyW'] || keys['ArrowUp']) moveZ += 1;
-    if (keys['KeyS'] || keys['ArrowDown']) moveZ -= 1;
-    if (keys['KeyD'] || keys['ArrowRight']) moveX -= 1;
-    if (keys['KeyA'] || keys['ArrowLeft']) moveX += 1;
+    if (isActionTriggered('moveUp', keys)) moveZ += 1;
+    if (isActionTriggered('moveDown', keys)) moveZ -= 1;
+    if (isActionTriggered('moveRight', keys)) moveX -= 1;
+    if (isActionTriggered('moveLeft', keys)) moveX += 1;
 
-    const isDash = Boolean(keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyQ']);
+    const isDash = isActionTriggered('dash', keys);
     const deg = (camYaw * 180 / Math.PI);
     const frameInput = {
       move: [moveX, moveZ],
       cam_yaw_deg: deg,
-      jump: Boolean(keys['Space']),
-      interact: Boolean(keys['KeyF'] || keys['Enter']),
-      pulse: Boolean(keys['KeyE']),
+      jump: isActionTriggered('jump', keys),
+      interact: isActionTriggered('interact', keys),
+      pulse: isActionTriggered('pulse', keys),
       dash: isDash
     };
 
@@ -810,13 +1090,10 @@ function animate(currentTime) {
       }
     }
 
-    keys['KeyF'] = false;
-    keys['KeyE'] = false;
-    keys['Space'] = false;
-    keys['Enter'] = false;
-    keys['KeyQ'] = false;
-    keys['ShiftLeft'] = false;
-    keys['ShiftRight'] = false;
+    // Reset single-press keys
+    for (const code of [...(userKeybinds.interact || []), ...(userKeybinds.pulse || []), ...(userKeybinds.jump || []), ...(userKeybinds.dash || [])]) {
+      keys[code] = false;
+    }
   }
 
   // Update visual entities
@@ -833,7 +1110,7 @@ function animate(currentTime) {
     dashAuraMat.opacity = Math.max(0, dashAuraMat.opacity - delta * 5);
   }
 
-  // Camera follow
+  // Camera follow (Reduced Motion: smoothens camera shake)
   const camDist = 7.5;
   const camHeight = Math.sin(camPitch) * camDist;
   const camHRadius = Math.cos(camPitch) * camDist;
@@ -847,7 +1124,7 @@ function animate(currentTime) {
     pulseAnim -= delta * 2.5;
     const curR = (1.0 - pulseAnim) * sim.tuning.pulse_radius;
     pulseRing.scale.set(curR, curR, 1);
-    pulseMat.opacity = pulseAnim;
+    pulseMat.opacity = isReducedMotion ? pulseAnim * 0.5 : pulseAnim;
   } else {
     pulseMat.opacity = 0;
   }
@@ -857,6 +1134,7 @@ function animate(currentTime) {
   updateDriftersVisual();
   updateCharmsVisual();
   updateLanternsVisual(nowSec);
+  updateOffscreenShadeIndicators();
 
   // Update HUD
   const litCount = sim.lanterns.filter(l => l.lit).length;
@@ -874,8 +1152,22 @@ function animate(currentTime) {
     timeEl.classList.remove('time-warning');
   }
 
-  // Wind display
-  if (sim.wind_enabled) {
+  // Accessibility: 10s Countdown Banner
+  if (sim.time_left_s <= 10.0 && sim.time_left_s > 0 && sim.state === 'playing') {
+    countdownBanner.classList.remove('hidden');
+    countdownBanner.textContent = Math.ceil(sim.time_left_s);
+  } else {
+    countdownBanner.classList.add('hidden');
+  }
+
+  // Accessibility: Wind Warning Banner (Night 3, 2s before active wind)
+  if (sim.wind_enabled && currentNight === 3) {
+    if (sim.wind_timer >= 0 && sim.wind_timer < 120 && !sim.wind.active) {
+      windWarningBanner.classList.remove('hidden');
+    } else {
+      windWarningBanner.classList.add('hidden');
+    }
+
     if (sim.wind.active) {
       windDisplay.textContent = `💨 Mạnh (${sim.wind.dir_deg}°)`;
       windDisplay.style.color = '#38bdf8';
@@ -883,6 +1175,8 @@ function animate(currentTime) {
       windDisplay.textContent = `💨 Yên`;
       windDisplay.style.color = '#F5F1E6';
     }
+  } else {
+    windWarningBanner.classList.add('hidden');
   }
 
   // Skill Badges Update
@@ -916,23 +1210,23 @@ function animate(currentTime) {
   );
 
   if (nearLantern) {
+    const interactKey = userKeybinds.interact[0]?.replace('Key', '') || 'F';
     if (!nearLantern.lit) {
       const cost = nearLantern.ever_lit ? sim.tuning.relight_cost : sim.tuning.lantern_cost;
       const typeStr = nearLantern.ever_lit ? 'thắp lại' : 'thắp';
       if (sim.player.carried > 0) {
         promptEl.classList.remove('hidden');
-        promptEl.textContent = `Nhấn [F] để ${typeStr} Đèn Lồng (${nearLantern.deposited}/${cost})`;
+        promptEl.textContent = `Nhấn [${interactKey}] để ${typeStr} Đèn Lồng (${nearLantern.deposited}/${cost})`;
       } else {
         promptEl.classList.remove('hidden');
         promptEl.textContent = `Đèn Lồng cần ${cost} đom đóm để ${typeStr} (${nearLantern.deposited}/${cost}). Hãy nhặt thêm đom đóm!`;
       }
     } else {
-      // Lit lantern: châm dầu
       const currentFuel = nearLantern.fuel_units / 60.0;
       const neededMotes = Math.ceil((100.0 - currentFuel) / 10.0);
       if (neededMotes > 0 && sim.player.carried > 0) {
         promptEl.classList.remove('hidden');
-        promptEl.textContent = `Nhấn [F] để châm dầu Đèn Lồng (Dầu: ${currentFuel.toFixed(1)}/100, cần ${neededMotes} đom đóm)`;
+        promptEl.textContent = `Nhấn [${interactKey}] để châm dầu Đèn Lồng (Dầu: ${currentFuel.toFixed(1)}/100, cần ${neededMotes} đom đóm)`;
       } else if (neededMotes === 0) {
         promptEl.classList.add('hidden');
       } else {
@@ -974,5 +1268,5 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-console.log('✨ Starting Phase 3 Game Animation Loop...');
+console.log('✨ Starting Phase 4 Game Animation Loop...');
 requestAnimationFrame(animate);

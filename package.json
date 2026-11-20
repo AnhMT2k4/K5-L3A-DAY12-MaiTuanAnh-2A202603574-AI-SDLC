@@ -1,14 +1,17 @@
 {
   "name": "dao-den-long",
   "version": "1.0.0",
-  "description": "Đảo Đèn Lồng - Phase 1",
+  "description": "Đảo Đèn Lồng - v1.0.0 (Phase 4 Release)",
   "type": "module",
   "main": "src/cli/headless.js",
   "scripts": {
-    "build": "node -e \"import('fs').then(fs => fs.cpSync('src/core', 'src/web/core', { recursive: true })); console.log('Build complete');\"",
+    "build": "node -e \"import('fs').then(fs => { fs.cpSync('src/core', 'src/web/core', { recursive: true }); console.log('Build complete'); });\"",
     "start": "node src/server.js",
     "test": "node tests/run-all.js",
-    "headless": "node src/cli/headless.js"
+    "headless": "node src/cli/headless.js",
+    "bench": "node src/cli/benchmark.js --seed 42 --duration 30 --out bench.json",
+    "soak": "node src/cli/soak.js --seed 7 --nights 10 --out soak.json",
+    "export-leaderboard": "node src/server.js --export-leaderboard leaderboard.json"
   },
   "dependencies": {
     "three": "^0.170.0"

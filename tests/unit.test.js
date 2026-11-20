@@ -381,4 +381,32 @@ console.log('--- Running Unit Tests (Phase 3 - Contract v1.2: Đèn cạn dầu)
   console.log('✓ Dawn win (dawn_survived) & Dawn lose passed');
 }
 
-console.log('ALL PHASE 3 UNIT TESTS PASSED!\n');
+// 14. Phase 4: Local Leaderboard validation & sorting
+{
+  const { validateName, sortLeaderboard, addLeaderboardEntry } = await import('../src/core/leaderboard.js');
+  import('fs').then(fs => {
+    // Name validation
+    assert.strictEqual(validateName('May_01'), true);
+    assert.strictEqual(validateName('abc'), true);
+    assert.strictEqual(validateName('123456789012'), true); // 12 chars
+    assert.strictEqual(validateName('ab'), false); // too short
+    assert.strictEqual(validateName('1234567890123'), false); // 13 chars (too long)
+    assert.strictEqual(validateName('May-01'), false); // invalid char -
+    assert.strictEqual(validateName('May 01'), false); // space
+
+    // Sorting
+    const list = [
+      { name: 'P1', score: 100, achieved_at: '2026-11-20T10:00:00Z' },
+      { name: 'P2', score: 250, achieved_at: '2026-11-20T10:05:00Z' },
+      { name: 'P3', score: 250, achieved_at: '2026-11-20T10:02:00Z' } // earlier
+    ];
+    const sorted = sortLeaderboard(list);
+    assert.strictEqual(sorted[0].name, 'P3'); // same score, earlier
+    assert.strictEqual(sorted[1].name, 'P2');
+    assert.strictEqual(sorted[2].name, 'P1');
+
+    console.log('✓ Leaderboard validation & sorting passed');
+  });
+}
+
+console.log('ALL PHASE 3 & 4 UNIT TESTS PASSED!\n');

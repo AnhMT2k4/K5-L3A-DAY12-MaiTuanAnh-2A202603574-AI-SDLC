@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Benchmark Scene - Đảo Đèn Lồng (Contract v1.3)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 1280px; height: 720px; overflow: hidden; background: #0E1430; font-family: sans-serif; }
+    #bench-canvas { width: 1280px; height: 720px; display: block; }
+    #bench-overlay {
+      position: absolute; top: 16px; left: 16px;
+      background: rgba(14, 20, 48, 0.9); color: #fff;
+      padding: 12px 20px; border-radius: 8px; font-family: monospace; font-size: 14px;
+      border: 1px solid rgba(255, 179, 71, 0.4);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div id="bench-overlay">
+    <div><b>ĐẢO ĐÈN LỒNG - BENCHMARK SCENE (1280x720)</b></div>
+    <div id="bench-status">Đang khởi tạo...</div>
+    <div id="bench-fps">FPS: --</div>
+  </div>
+  <canvas id="bench-canvas" width="1280" height="720"></canvas>
+
+  <script type="module" src="bench.js"></script>
+</body>
+</html>

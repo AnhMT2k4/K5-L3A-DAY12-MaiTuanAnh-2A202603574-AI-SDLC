@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng - Phase 3: Đèn Cạn Dầu</title>
+  <title>Đảo Đèn Lồng - Phase 4: Phát Hành v1.0.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,6 +27,13 @@
 
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
+
+    <!-- Off-screen Shade Warning Indicators Overlay -->
+    <div id="shade-indicators-overlay"></div>
+
+    <!-- Visual Warning Banners (Accessibility) -->
+    <div id="wind-warning-banner" class="hud-banner hidden">⚠️ CẢNH BÁO: GIÓ LẠC SẮP THỔI MẠNH TRONG 2 GIÂY!</div>
+    <div id="countdown-banner" class="hud-countdown hidden">10</div>
 
     <!-- Top HUD -->
     <div id="hud">
@@ -68,14 +75,14 @@
       <div class="skill-badge" id="dash-badge">
         <div class="badge-icon">⚡</div>
         <div class="badge-info">
-          <span class="badge-name">LƯỚT [Shift/Q]</span>
+          <span class="badge-name" id="dash-badge-label">LƯỚT [Shift/Q]</span>
           <span id="dash-cd-val" class="badge-cd ready">SẴN SÀNG</span>
         </div>
       </div>
       <div class="skill-badge" id="pulse-badge">
         <div class="badge-icon">✨</div>
         <div class="badge-info">
-          <span class="badge-name">TỎA SÁNG [E]</span>
+          <span class="badge-name" id="pulse-badge-label">TỎA SÁNG [E]</span>
           <span id="pulse-cd-val" class="badge-cd ready">SẴN SÀNG</span>
         </div>
       </div>
@@ -89,12 +96,16 @@
         <button class="btn-night" data-night="3">Đêm 3: Đảo Chuông</button>
       </div>
       <button id="btn-pause-toggle" class="btn-pause">⏸️ [P/Esc]</button>
+      <button id="btn-leaderboard-toggle" class="btn-pause">🏆 Bảng Xếp Hạng</button>
+      <button id="btn-keybinds-toggle" class="btn-pause">⌨️ Đổi Phím</button>
       <button id="btn-colorblind-toggle" class="btn-pause">👁️ Bảng màu dễ phân biệt</button>
+      <button id="btn-motion-toggle" class="btn-pause">🌊 Giảm chuyển động: Tắt</button>
+      <button id="btn-fontsize-toggle" class="btn-pause">🔍 Chữ lớn (x1.25): Tắt</button>
     </div>
 
     <!-- Controls prompt -->
     <div id="controls-hint">
-      <b>WASD / Mũi tên:</b> Di chuyển | <b>Shift / Q:</b> Lướt | <b>Space:</b> Nhảy | <b>E:</b> Tỏa sáng (xua bóng) | <b>F:</b> Nạp / Châm dầu | <b>P/Esc:</b> Tạm dừng
+      <b>WASD / Mũi tên:</b> Di chuyển | <b>Shift / Q:</b> Lướt | <b>Space:</b> Nhảy | <b>E:</b> Tỏa sáng | <b>F:</b> Nạp/Châm dầu | <b>P/Esc:</b> Tạm dừng
     </div>
 
     <!-- Interaction Banner -->
@@ -112,6 +123,48 @@
       </div>
     </div>
 
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+      <div class="modal-content modal-large">
+        <h2>🏆 BẢNG XẾP HẠNG CỤC BỘ</h2>
+        <div class="table-container">
+          <table id="leaderboard-table">
+            <thead>
+              <tr>
+                <th>HẠNG</th>
+                <th>TÊN</th>
+                <th>ĐIỂM</th>
+                <th>ĐÊM THẮNG</th>
+                <th>NGÀY ĐẠT</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+              <tr><td colspan="5">Đang tải bảng xếp hạng...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="btn-close-leaderboard" class="btn-primary">ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Rebinding Modal -->
+    <div id="keybinds-modal" class="modal hidden">
+      <div class="modal-content modal-large">
+        <h2>⌨️ TÙY BIẾN PHÍM ĐIỀU KHIỂN</h2>
+        <p>Nhấp vào nút để đổi phím. Trùng phím sẽ được tự động cảnh báo.</p>
+        <div id="keybinds-alert" class="keybinds-warning hidden">⚠️ Phím này đã được dùng cho thao tác khác!</div>
+        <div class="keybinds-grid" id="keybinds-container">
+          <!-- Populated by JS -->
+        </div>
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="btn-reset-keybinds" class="btn-secondary">KHÔI PHỤC MẶC ĐỊNH</button>
+          <button id="btn-close-keybinds" class="btn-primary">LƯU & ĐÓNG</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Game Over / Victory Modal -->
     <div id="game-modal" class="modal hidden">
       <div class="modal-content">
@@ -120,6 +173,17 @@
         <div class="modal-stats">
           <div>Điểm chung cuộc: <span id="final-score" class="highlight">0</span></div>
         </div>
+
+        <!-- Name entry for leaderboard -->
+        <div id="save-score-section" style="margin: 16px 0;">
+          <p style="font-size: 14px; margin-bottom: 8px;">Nhập tên lưu vào Bảng Xếp Hạng (3-12 ký tự [A-Za-z0-9_]):</p>
+          <div style="display: flex; gap: 8px; justify-content: center;">
+            <input type="text" id="player-name-input" maxlength="12" placeholder="TenCuaBan" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #FFB347; background: #0E1430; color: #fff; font-size: 14px; text-align: center;">
+            <button id="btn-submit-score" class="btn-primary" style="padding: 8px 16px; font-size: 13px;">LƯU ĐIỂM</button>
+          </div>
+          <div id="save-score-status" style="font-size: 12px; margin-top: 6px; color: #FFB347;"></div>
+        </div>
+
         <div class="modal-buttons">
           <button id="btn-restart" class="btn-primary">CHƠI LẠI</button>
           <button id="btn-next-night" class="btn-secondary hidden">SANG ĐÊM TIẾP THEO ➔</button>
