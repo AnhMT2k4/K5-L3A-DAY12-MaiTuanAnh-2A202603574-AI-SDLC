@@ -73,6 +73,15 @@ body, html {
   animation: blink 0.8s infinite alternate;
 }
 
+/* Colorblind mode styles */
+body.colorblind .time-warning {
+  color: #FFFFFF !important;
+}
+
+body.colorblind .time-warning::before {
+  content: '⚠️ ';
+}
+
 @keyframes blink {
   from { opacity: 1; }
   to { opacity: 0.3; }
@@ -129,7 +138,7 @@ body, html {
   border-radius: 10px;
   color: #F5F1E6;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -137,6 +146,12 @@ body, html {
 
 .btn-pause:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-pause.active {
+  background: #00B3FF;
+  color: #0E1430;
+  font-weight: 700;
 }
 
 /* Skills Cooldown HUD (Bottom Right) */
@@ -182,6 +197,14 @@ body, html {
   font-size: 13px;
   font-weight: 700;
   color: #FF5A5F;
+}
+
+body.colorblind .badge-cd:not(.ready) {
+  color: #FFFFFF;
+}
+
+body.colorblind .badge-cd:not(.ready)::before {
+  content: '⚠️ ';
 }
 
 .badge-cd.ready {

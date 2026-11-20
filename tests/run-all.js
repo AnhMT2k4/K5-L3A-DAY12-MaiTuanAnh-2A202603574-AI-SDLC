@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 
 console.log('====================================');
-console.log(' RUNNING ALL VERIFICATION TEST SUITES (PHASE 2 - CONTRACT v1.1)');
+console.log(' RUNNING ALL VERIFICATION TEST SUITES (PHASE 3 - CONTRACT v1.2)');
 console.log('====================================\n');
 
 try {

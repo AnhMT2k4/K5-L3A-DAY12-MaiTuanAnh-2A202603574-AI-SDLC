@@ -7,9 +7,9 @@ export const DEFAULT_TUNING = {
   interact_radius: 2.0,
   pulse_cost: 3,
   pulse_radius: 5.0,
-  night1_duration_s: 300,
-  night2_duration_s: 330,
-  night3_duration_s: 360,
+  night1_duration_s: 240,
+  night2_duration_s: 270,
+  night3_duration_s: 300,
   dash_speed: 14.0,
   dash_duration_s: 0.2, // 12 ticks
   dash_cooldown_s: 1.5, // 90 ticks
@@ -23,12 +23,22 @@ export const DEFAULT_TUNING = {
   shade_speed: 4.0,
   shade_hit_radius: 1.0,
   fall_enabled: true,
+  fuel_max: 100,
+  fuel_decay_per_s: 1.0,
+  fuel_per_mote: 10,
+  relight_cost: 5,
+  win_ratio: 0.6,
+  drain_per_s: 5,
+  low_fuel_threshold: 30,
+  capacity_max: 20,
   score: {
-    per_mote: 10,
-    per_lantern: 100,
+    per_mote_deposited: 5,
+    per_first_light: 100,
+    per_relight: 40,
     per_stun: 5,
-    per_second_left: 2,
-    per_flame_left: 50
+    per_stun_drain: 15,
+    per_dawn_lit_lantern: 50,
+    per_dawn_flame: 50
   }
 };
 
@@ -56,20 +66,27 @@ export const PALETTE = {
   textUI: '#F5F1E6'
 };
 
+// Colorblind friendly palette (Ticket-03)
+export const COLORBLIND_PALETTE = {
+  ...PALETTE,
+  shadeBorder: '#00B3FF',
+  dangerUI: '#FFFFFF'
+};
+
 // --- MAP CONFIGURATIONS ---
 
 // NIGHT 1: Đảo Bến
 export const NIGHT1_CONFIG = {
   name: 'Đảo Bến',
   islandRadius: 40.0,
-  duration_s: 300,
+  duration_s: 240,
   startPos: [0.0, 0.0, 0.0],
   lanterns: [
-    { id: 'L1', pos: [0.0, 0.0, 25.0], lit: false, deposited: 0 },
-    { id: 'L2', pos: [23.8, 0.0, 7.7], lit: false, deposited: 0 },
-    { id: 'L3', pos: [14.7, 0.0, -20.2], lit: false, deposited: 0 },
-    { id: 'L4', pos: [-14.7, 0.0, -20.2], lit: false, deposited: 0 },
-    { id: 'L5', pos: [-23.8, 0.0, 7.7], lit: false, deposited: 0 }
+    { id: 'L1', pos: [0.0, 0.0, 25.0], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L2', pos: [23.8, 0.0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L3', pos: [14.7, 0.0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L4', pos: [-14.7, 0.0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L5', pos: [-23.8, 0.0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 }
   ],
   moteSpawnPoints: (() => {
     const pts = [];
@@ -107,15 +124,15 @@ export const NIGHT2_CONFIG = {
   islandA: { center: [0, 0, 0], radius: 28.0 },
   islandB: { center: [70, 0, 0], radius: 28.0 },
   bridge: { xMin: 26, xMax: 44, zMin: -2, zMax: 2 },
-  duration_s: 330,
+  duration_s: 270,
   startPos: [0.0, 0.0, 0.0],
   lanterns: [
-    { id: 'L1', pos: [0, 0, 20], lit: false, deposited: 0 },
-    { id: 'L2', pos: [17, 0, -10], lit: false, deposited: 0 },
-    { id: 'L3', pos: [-17, 0, -10], lit: false, deposited: 0 },
-    { id: 'L4', pos: [70, 0, 20], lit: false, deposited: 0 },
-    { id: 'L5', pos: [87, 0, -10], lit: false, deposited: 0 },
-    { id: 'L6', pos: [53, 0, -10], lit: false, deposited: 0 }
+    { id: 'L1', pos: [0, 0, 20], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L2', pos: [17, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L3', pos: [-17, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L4', pos: [70, 0, 20], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L5', pos: [87, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L6', pos: [53, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 }
   ],
   jumpPads: [
     { id: 'JP1', pos: [20, 0, 18], radius: 1.0, target: [70, 0, 0], vel_y: 14.0, speed_h: 24.0 },
@@ -163,16 +180,16 @@ export const NIGHT2_CONFIG = {
 export const NIGHT3_CONFIG = {
   name: 'Đảo Chuông',
   islandRadius: 45.0,
-  duration_s: 360,
+  duration_s: 300,
   startPos: [0.0, 0.0, 0.0],
   lanterns: [
-    { id: 'L1', pos: [0, 6, 6], lit: false, deposited: 0 },
-    { id: 'L2', pos: [18, 3, 10], lit: false, deposited: 0 },
-    { id: 'L3', pos: [-18, 3, 10], lit: false, deposited: 0 },
-    { id: 'L4', pos: [35, 0, -10], lit: false, deposited: 0 },
-    { id: 'L5', pos: [-35, 0, -10], lit: false, deposited: 0 },
-    { id: 'L6', pos: [20, 0, -35], lit: false, deposited: 0 },
-    { id: 'L7', pos: [-20, 0, -35], lit: false, deposited: 0 }
+    { id: 'L1', pos: [0, 6, 6], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L2', pos: [18, 3, 10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L3', pos: [-18, 3, 10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L4', pos: [35, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L5', pos: [-35, 0, -10], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L6', pos: [20, 0, -35], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+    { id: 'L7', pos: [-20, 0, -35], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 }
   ],
   jumpPads: [
     { id: 'JP1', pos: [0, 3, 13], radius: 1.0, targetDir: [0, 0, -1], vel_y: 12.0, speed_h: 8.0 }

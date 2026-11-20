@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đảo Đèn Lồng - Phase 2: Ba Hòn Đảo</title>
+  <title>Đảo Đèn Lồng - Phase 3: Đèn Cạn Dầu</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -39,12 +39,12 @@
         <div id="carried-display" class="val">✨ 0 / 10</div>
       </div>
       <div class="hud-card">
-        <span class="label">ĐÈN LỒNG</span>
+        <span class="label">ĐÈN ĐANG SÁNG</span>
         <div id="lanterns-display" class="val">🏮 0 / 5</div>
       </div>
       <div class="hud-card">
         <span class="label">THỜI GIAN</span>
-        <div id="time-display" class="val">⏱️ 300s</div>
+        <div id="time-display" class="val">⏱️ 240s</div>
       </div>
       <div class="hud-card">
         <span class="label">ĐIỂM SỐ</span>
@@ -81,7 +81,7 @@
       </div>
     </div>
 
-    <!-- Night Selector & Top Bar Controls -->
+    <!-- Top Bar Controls -->
     <div id="top-bar-controls">
       <div class="night-selector">
         <button class="btn-night active" data-night="1">Đêm 1: Đảo Bến</button>
@@ -89,11 +89,12 @@
         <button class="btn-night" data-night="3">Đêm 3: Đảo Chuông</button>
       </div>
       <button id="btn-pause-toggle" class="btn-pause">⏸️ [P/Esc]</button>
+      <button id="btn-colorblind-toggle" class="btn-pause">👁️ Bảng màu dễ phân biệt</button>
     </div>
 
     <!-- Controls prompt -->
     <div id="controls-hint">
-      <b>WASD / Mũi tên:</b> Di chuyển | <b>Shift / Q:</b> Lướt | <b>Space:</b> Nhảy | <b>E:</b> Tỏa sáng (xua bóng mực) | <b>F:</b> Nạp đèn | <b>P/Esc:</b> Tạm dừng
+      <b>WASD / Mũi tên:</b> Di chuyển | <b>Shift / Q:</b> Lướt | <b>Space:</b> Nhảy | <b>E:</b> Tỏa sáng (xua bóng) | <b>F:</b> Nạp / Châm dầu | <b>P/Esc:</b> Tạm dừng
     </div>
 
     <!-- Interaction Banner -->
@@ -115,7 +116,7 @@
     <div id="game-modal" class="modal hidden">
       <div class="modal-content">
         <h2 id="modal-title">CHIẾN THẮNG!</h2>
-        <p id="modal-desc">Bạn đã thắp sáng toàn bộ Đèn Lồng Lớn, xua tan sương đen!</p>
+        <p id="modal-desc">Bạn đã sống sót qua đêm và giữ sáng hòn đảo tới bình minh!</p>
         <div class="modal-stats">
           <div>Điểm chung cuộc: <span id="final-score" class="highlight">0</span></div>
         </div>

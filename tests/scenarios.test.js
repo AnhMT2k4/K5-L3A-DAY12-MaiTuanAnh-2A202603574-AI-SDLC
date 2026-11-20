@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import assert from 'assert';
 import fs from 'fs';
 
-console.log('--- Running Scenarios Tests (Phase 2 - Contract v1.1) ---');
+console.log('--- Running Scenarios Tests (Phase 3 - Contract v1.2) ---');
 
 // 1. Night 1 Scenario
 {
@@ -20,6 +20,10 @@ console.log('--- Running Scenarios Tests (Phase 2 - Contract v1.1) ---');
   assert(snapshot0.wind !== undefined);
   assert(snapshot0.player.vel !== undefined);
   assert(snapshot0.player.grounded !== undefined);
+  assert(snapshot0.player.capacity !== undefined, 'player.capacity must exist in Contract v1.2 snapshot');
+  assert(snapshot0.lanterns[0].fuel !== undefined, 'lantern.fuel must exist in Contract v1.2 snapshot');
+  assert(snapshot0.lanterns[0].ever_lit !== undefined, 'lantern.ever_lit must exist in Contract v1.2 snapshot');
+  assert(snapshot0.lanterns[0].relit_count !== undefined, 'lantern.relit_count must exist in Contract v1.2 snapshot');
   assert(Array.isArray(snapshot0.motes));
   assert(Array.isArray(snapshot0.drifters));
   assert(Array.isArray(snapshot0.charms));
